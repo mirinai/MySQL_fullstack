@@ -1,0 +1,156 @@
+USE SCOTT;
+
+-- 이름이 JONES인 사원의 샐러리=2975
+SELECT SAL FROM EMP
+WHERE ENAME='JONES';
+
+-- 샐러리가 2975보다 높은 사원의 정보를 나타내기
+SELECT * FROM EMP
+WHERE SAL>2975;
+
+-- 서브쿼리로 JONES의 급여보다 높은 급여를 받는 사원정보를 나타내기
+SELECT * FROM EMP
+WHERE SAL>(
+SELECT SAL FROM EMP
+WHERE ENAME='JONES'
+);
+
+-- ALLEN의 추가수당보다 많은 추가수당을 받는 사원 정보를 조회
+SELECT * FROM EMP WHERE COMM > (SELECT COMM FROM EMP WHERE ENAME="ALLEN");
+
+-- 첫 번째 쿼리는 부서 20의 평균 급여와 비교하여 모든 부서의 직원 정보를 반환하며, 직원 정보만을 반환합니다.
+SELECT * FROM EMP WHERE SAL > (SELECT AVG(SAL) FROM EMP WHERE DEPTNO=20);
+
+-- 두 번째 쿼리는 부서 20의 직원 중에서 급여가 전체 평균보다 높은 사람들만 조회하며, 직원 정보와 함께 부서 정보도 반환합니다.
+SELECT E.*,D.* 
+FROM EMP E, DEPT D 
+WHERE E.DEPTNO=D.DEPTNO 
+AND E.DEPTNO=20 
+AND E.SAL>(SELECT AVG(SAL) FROM EMP);
+
+-- SCOTT보다 늦게 입사한 사원들의 전체 정보 출력
+SELECT E.*,D.* FROM EMP E, DEPT D WHERE HIREDATE > (SELECT HIREDATE FROM EMP WHERE ENAME='SCOTT');
+
+-- SINGLE-ROW SUBQUERY: 서브쿼리의 결과값이 날짜일 때
+SELECT * FROM EMP WHERE HIREDATE < (SELECT HIREDATE FROM EMP WHERE ENAME='SCOTT');
+
+-- 서브쿼리안에서 함수를 사용한 경우: 부서 20번의 평균 급여보다 높은 급여를 받는 사원 정보 조회
+SELECT E.EMPNO, E.ENAME, E.JOB, E.SAL, D.DEPTNO, D.DNAME, D.LOC 
+FROM EMP E, DEPT D
+WHERE E.DEPTNO=D.DEPTNO
+AND E.DEPTNO=20
+AND E.SAL> (SELECT AVG(SAL) FROM EMP);
+
+-- 각 부서마다 최고 급여와 같은 급여를 받는 사원 정보 나타내기
+SELECT * FROM EMP WHERE SAL IN (SELECT MAX(SAL) FROM EMP GROUP BY DEPTNO);
+-- 사원이 속한 부서의 최고 급여와 일치하지 않아도, 다른 부서의 최고 급여와 급여가 같으면 결과에 포함될 수 있습니다.
+
+-- 각 부서의 최고 급여 조회
+SELECT MAX(SAL) FROM EMP GROUP BY DEPTNO;
+
+-- 상관 서브쿼리를 사용하여 부서별 최고 급여를 받는 사원 정보 조회
+SELECT E1.* FROM EMP E1 WHERE SAL IN(SELECT MAX(SAL) FROM EMP E2 WHERE E1.DEPTNO=E2.DEPTNO);
+/*
+문제:
+서브쿼리를 사용하여 각 부서에서 최고 급여를 받는 사원의 정보를 표시하세요.
+
+요구 사항:
+EMP 테이블을 사용합니다.
+각 사원의 부서 내에서 가장 높은 급여를 받는 사원들의 모든 컬럼을 반환해야 합니다.
+부서별 최고 급여를 찾기 위해 서브쿼리를 구현합니다.
+서브쿼리가 메인 쿼리와 적절히 연관되도록 합니다.
+*/
+
+-- 부서별 최고 급여 조회
+SELECT DEPTNO, MAX(SAL) AS MAX_SAL
+FROM EMP
+GROUP BY DEPTNO;
+
+-- 상관 서브쿼리를 사용한 부서별 최고 급여 조회
+SELECT * FROM EMP E1 WHERE SAL = (SELECT MAX(SAL) FROM EMP E2 WHERE E1.DEPTNO=E2.DEPTNO);
+
+-- 여러 컬럼의 서브쿼리를 사용하는 예시: 부서번호와 급여를 동시에 비교하여 조회
+SELECT * FROM EMP WHERE (DEPTNO, SAL) IN (SELECT DEPTNO,MAX(SAL) FROM EMP GROUP BY DEPTNO);
+
+-- 인라인 뷰를 사용한 쿼리: 부서 10번의 사원들과 해당 부서의 정보를 출력
+SELECT E10.EMPNO,E10.ENAME,E10.DEPTNO,D.DNAME,D.LOC
+FROM (SELECT * FROM EMP WHERE DEPTNO=10) E10, 
+(SELECT * FROM DEPT) D
+WHERE E10.DEPTNO=D.DEPTNO;
+
+-- WITH 절을 사용한 쿼리
+WITH
+E10 AS (SELECT * FROM EMP WHERE DEPTNO=10),
+D AS (SELECT * FROM DEPT)
+SELECT E10.EMPNO,E10.ENAME,E10.DEPTNO,D.DNAME,D.LOC
+FROM E10, D
+WHERE E10.DEPTNO=D.DEPTNO;
+
+-- SELECT에도 서브쿼리를 사용하여 급여등급과 부서 이름을 조회
+SELECT EMPNO, ENAME, JOB, SAL, 
+(SELECT GRADE FROM SALGRADE WHERE E.SAL BETWEEN LOSAL AND HISAL) AS SALGRADE, 
+DEPTNO, 
+(SELECT DNAME FROM DEPT D WHERE E.DEPTNO=D.DEPTNO) AS DNAME
+FROM EMP E;
+
+-- Q1: ALLEN과 같은 직책을 가진 사원들의 정보와 부서 정보를 조회
+SELECT JOB FROM EMP WHERE ENAME='ALLEN';
+SELECT E1.JOB, E1.EMPNO, E1.SAL, E1.DEPTNO, D.DNAME 
+FROM EMP E1
+JOIN DEPT D ON E1.DEPTNO = D.DEPTNO
+WHERE E1.JOB = (SELECT JOB FROM EMP E2 WHERE E2.ENAME='ALLEN');
+
+-- ALLEN과 같은 직책을 가진 사원들 조회 (JOIN 사용)
+SELECT E1.EMPNO, E1.ENAME, E1.JOB, E1.SAL, E1.DEPTNO, D.DNAME
+FROM EMP E1
+JOIN EMP E2 ON E1.JOB = E2.JOB
+JOIN DEPT D ON E1.DEPTNO = D.DEPTNO
+WHERE E2.ENAME = 'ALLEN';
+
+-- ALLEN과 같은 직책을 가진 사원들 조회 (서브쿼리 사용)
+SELECT E1.EMPNO, E1.ENAME, E1.JOB, E1.SAL, E1.DEPTNO, D.DNAME
+FROM EMP E1
+JOIN DEPT D ON E1.DEPTNO = D.DEPTNO
+WHERE E1.JOB IN (SELECT JOB FROM EMP WHERE ENAME = 'ALLEN');
+
+-- Q2: 모든 사원의 평균 급여보다 높은 급여를 받는 사원들의 사원정보, 부서정보, 급여등급 정보를 출력
+-- (단 출력할 떼 급여가 많은순서대로 줄지어놓고, 급여가 같으면 사원번호를 기준으로 오름차순으로 정렬하기)
+SELECT AVG(SAL) FROM EMP;
+SELECT E1.*, D.*, S.GRADE 
+FROM EMP E1
+JOIN DEPT D ON E1.DEPTNO=D.DEPTNO
+JOIN SALGRADE S ON E1.SAL 
+BETWEEN S.LOSAL AND S.HISAL
+WHERE E1.SAL> (SELECT AVG(SAL) FROM EMP) 
+ORDER BY E1.SAL DESC, E1.EMPNO ASC;
+
+-- Q3: 10번 부서에서 일하는 사원 가운데 30번 부서에는 없는 JOB을 가진 사원들의 사원 정보, 부서 정보를 출력
+SELECT E.*,D.* 
+FROM EMP E 
+JOIN DEPT D ON E.DEPTNO = D.DEPTNO
+WHERE E.DEPTNO=10 AND NOT EXISTS (SELECT 1 FROM EMP E2
+WHERE E2.DEPTNO = 30 AND E2.JOB = E.JOB);
+
+-- Q4: JOB이 SALESMAN인 사람들의 최고 급여보다 높은 급여를 받는 사원들의 사원 정보, 급여 등급 정보를 출력
+-- (서브쿼리를 활용할 때 여러 ROW의 함수를 사용하는 방법과 그렇지 않은 방법을 통해 사원번호를 기준으로 오름차순으로 정렬)
+SELECT E1.EMPNO,E1.ENAME,E1.SAL, S.GRADE FROM EMP E1 
+JOIN SALGRADE S ON E1.SAL 
+BETWEEN S.LOSAL AND S.HISAL WHERE E1.SAL > ALL(SELECT E2.SAL FROM EMP E2
+WHERE E2.JOB="SALESMAN");
+
+-- 서브쿼리에서 여러 행을 비교할 때 `ALL`을 사용하여 SALESMAN보다 높은 급여를 받는 사원 조회
+SELECT E1.EMPNO, E1.ENAME, E1.SAL, S.GRADE
+FROM EMP E1 
+JOIN SALGRADE S ON E1.SAL BETWEEN S.LOSAL AND S.HISAL
+WHERE E1.SAL > ALL (
+    SELECT E2.SAL 
+    FROM EMP E2
+    WHERE E2.JOB = 'SALESMAN'
+)
+ORDER BY E1.EMPNO ASC;
+
+/*
+설명:
+메인 쿼리 (E1):
+EMP 테이블에서 모든 컬럼을 선택하고, E1이라는 별칭을 부여합니다.
+이것이 우리가 필터링할 기본 데이터셋입니다

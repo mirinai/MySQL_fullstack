@@ -113,6 +113,15 @@ FROM EMP E1
 JOIN DEPT D ON E1.DEPTNO = D.DEPTNO
 WHERE E1.JOB IN (SELECT JOB FROM EMP WHERE ENAME = 'ALLEN');
 
+-- 9-1
+SELECT E.JOB, E.EMPNO, E.ENAME, E.SAL, E.DEPTNO, D.DNAME
+  FROM EMP E, DEPT D
+ WHERE E.DEPTNO = D.DEPTNO
+   AND JOB = (SELECT JOB
+                FROM EMP
+               WHERE ENAME = 'ALLEN'); 
+
+
 -- Q2: 모든 사원의 평균 급여보다 높은 급여를 받는 사원들의 사원정보, 부서정보, 급여등급 정보를 출력
 -- (단 출력할 떼 급여가 많은순서대로 줄지어놓고, 급여가 같으면 사원번호를 기준으로 오름차순으로 정렬하기)
 SELECT AVG(SAL) FROM EMP;
@@ -124,6 +133,16 @@ BETWEEN S.LOSAL AND S.HISAL
 WHERE E1.SAL> (SELECT AVG(SAL) FROM EMP) 
 ORDER BY E1.SAL DESC, E1.EMPNO ASC;
 
+-- 9-2
+SELECT E.EMPNO, E.ENAME, D.DNAME, E.HIREDATE, D.LOC, E.SAL, S.GRADE
+  FROM EMP E, DEPT D, SALGRADE S
+ WHERE E.DEPTNO = D.DEPTNO
+   AND E.SAL BETWEEN S.LOSAL AND S.HISAL
+   AND SAL > (SELECT AVG(SAL)
+                FROM EMP)
+ORDER BY E.SAL DESC, E.EMPNO; 
+
+
 -- Q3: 10번 부서에서 일하는 사원 가운데 30번 부서에는 없는 JOB을 가진 사원들의 사원 정보, 부서 정보를 출력
 SELECT E.*,D.* 
 FROM EMP E 
@@ -131,12 +150,23 @@ JOIN DEPT D ON E.DEPTNO = D.DEPTNO
 WHERE E.DEPTNO=10 AND NOT EXISTS (SELECT 1 FROM EMP E2
 WHERE E2.DEPTNO = 30 AND E2.JOB = E.JOB);
 
+-- 9-3
+SELECT E.EMPNO, E.ENAME, E.JOB, E.DEPTNO, D.DNAME, D.LOC
+  FROM EMP E, DEPT D
+ WHERE E.DEPTNO = D.DEPTNO
+   AND E.DEPTNO = 10
+   AND JOB NOT IN (SELECT DISTINCT JOB
+                     FROM EMP
+                    WHERE DEPTNO = 30); 
+
+
 -- Q4: JOB이 SALESMAN인 사람들의 최고 급여보다 높은 급여를 받는 사원들의 사원 정보, 급여 등급 정보를 출력
 -- (서브쿼리를 활용할 때 여러 ROW의 함수를 사용하는 방법과 그렇지 않은 방법을 통해 사원번호를 기준으로 오름차순으로 정렬)
 SELECT E1.EMPNO,E1.ENAME,E1.SAL, S.GRADE FROM EMP E1 
 JOIN SALGRADE S ON E1.SAL 
 BETWEEN S.LOSAL AND S.HISAL WHERE E1.SAL > ALL(SELECT E2.SAL FROM EMP E2
 WHERE E2.JOB="SALESMAN");
+
 
 -- 서브쿼리에서 여러 행을 비교할 때 `ALL`을 사용하여 SALESMAN보다 높은 급여를 받는 사원 조회
 SELECT E1.EMPNO, E1.ENAME, E1.SAL, S.GRADE
@@ -149,8 +179,22 @@ WHERE E1.SAL > ALL (
 )
 ORDER BY E1.EMPNO ASC;
 
+
+
 /*
 설명:
 메인 쿼리 (E1):
 EMP 테이블에서 모든 컬럼을 선택하고, E1이라는 별칭을 부여합니다.
-이것이 우리가 필터링할 기본 데이터셋입니다
+이것이 우리가 필터링할 기본 데이터셋입니다*/
+
+-- 9-4
+-- 다중행 함수 사용하지 않는 방법
+SELECT E.EMPNO, E.ENAME, E.SAL, S.GRADE
+  FROM EMP E, SALGRADE S
+ WHERE E.SAL BETWEEN S.LOSAL AND S.HISAL
+   AND SAL > (SELECT MAX(SAL)
+                FROM EMP
+               WHERE JOB = 'SALESMAN')
+ORDER BY E.EMPNO; 
+
+
